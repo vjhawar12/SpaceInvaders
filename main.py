@@ -1,7 +1,8 @@
 import pygame 
-import os 
-import sys 
-import random 
+from os import path 
+from sys import exit
+from random import randint
+from time import time
 
 pygame.init() 
 pygame.font.init()
@@ -12,9 +13,11 @@ black = (0, 0, 0)
 red = (255, 0, 0)
 white = (255, 255, 255)
 
+clock = pygame.time.Clock()
+
 font = pygame.font.SysFont("monaco", 30)
-bulletSound = pygame.mixer.Sound(os.path.join("data", "bullet.wav"))
-hitSound = pygame.mixer.Sound(os.path.join("data", "explosion.wav"))
+bulletSound = pygame.mixer.Sound(path.join("data", "bullet.wav"))
+hitSound = pygame.mixer.Sound(path.join("data", "explosion.wav"))
 
 screen = pygame.display.set_mode(dimensions)
 pygame.display.set_caption("Space Invaders")
@@ -24,14 +27,16 @@ aliens = pygame.sprite.Group()
 bullets = pygame.sprite.Group() 
 
 def quit(): 
-	sys.exit() 
+	exit() 
 	pygame.quit()
 
-def renderFonts():
+def renderStats():
 	livesText = font.render(str(Player.lives), True, white)
 	killsText = font.render(str(Player.kills), True, white)
+	ammoText = font.render(f"{Bullet.ammo} / {Bullet.maxAmmo}", True, white)
 	screen.blit(livesText, (10, 0))
 	screen.blit(killsText, (10, 40))
+	screen.blit(ammoText, (10, 80))
 
 class Alien(pygame.sprite.Sprite): 
 	minX = 100
@@ -43,10 +48,10 @@ class Alien(pygame.sprite.Sprite):
 	currentAliens = 0
 
 	def __init__(self): 
-		randX = random.randint(Alien.minX, Alien.maxX)
-		randY = random.randint(Alien.minY, Alien.maxY)
+		randX = randint(Alien.minX, Alien.maxX)
+		randY = randint(Alien.minY, Alien.maxY)
 
-		self.image = pygame.image.load(os.path.join("data", "alien.png"))
+		self.image = pygame.image.load(path.join("data", "alien.png"))
 		self.rect = self.image.get_rect()
 		self.rect.x = randX 
 		self.rect.y = randY
@@ -77,11 +82,11 @@ class Alien(pygame.sprite.Sprite):
 
 class Player(pygame.sprite.Sprite): 
 	speed = 6 
-	lives = 3
+	lives = 30
 	kills = 0
 
 	def __init__(self): 
-		self.image = pygame.image.load(os.path.join("data", "spaceship.png"))
+		self.image = pygame.image.load(path.join("data", "spaceship.png"))
 		self.rect = self.image.get_rect()
 		self.rect.x = 400 
 		self.rect.y = 700 
@@ -102,10 +107,14 @@ class Player(pygame.sprite.Sprite):
 _player = Player()
 
 class Bullet(pygame.sprite.Sprite): 
-	speed = 12 
+	speed = 12
+	ammo = 15
+	maxAmmo = 15
+	reloadSeconds = 3
+	timeBetweenShots = 0.5
 
 	def __init__(self): 
-		self.image = pygame.image.load(os.path.join("data", "bullet.png"))
+		self.image = pygame.image.load(path.join("data", "bullet.png"))
 		self.rect = self.image.get_rect()
 		self.rect.x = _player.rect.x
 		self.rect.y = _player.rect.y
@@ -177,22 +186,67 @@ def checkColl():
 					pygame.mixer.music.stop()
 
 
+def pause():
+	pauseText = font.render("Press r to resume", True, white)
+	text_rect = pauseText.get_rect(center=(400, 400))
+	screen.blit(pauseText, text_rect) 
+
+def canShoot(): 
+	return not paused and not isReloading and not isShooting and Bullet.ammo > 0
+
+paused = False
+isReloading = False
+isShooting = False
+reloadStartTime, reloadEndTime = 0, 0
+shootStartTime, shootEndTime = 0, 0
+
 while True:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT: 
 			quit() 
 		if event.type == pygame.KEYDOWN:
 			if event.key == pygame.K_SPACE:
-				bullet = Bullet()
+				if canShoot():
+					isShooting = True
+					Bullet.ammo -= 1
+					bullet = Bullet()
+			elif event.key == pygame.K_p: 
+				paused = True
+			elif event.key == pygame.K_r: 
+				paused = False
+			elif event.key == pygame.K_q: 
+				isReloading = True
+
+	if isReloading:
+		if reloadStartTime == 0: 
+			reloadStartTime = time()
+		else: 
+			reloadEndTime = time() 
+		if reloadEndTime - reloadStartTime >= Bullet.reloadSeconds: 
+			Bullet.ammo = Bullet.maxAmmo
+			reloadStartTime, reloadEndTime = 0, 0
+			isReloading = False
+
+	if isShooting:
+		if shootStartTime == 0: 
+			shootStartTime = time()
+		else: 
+			shootEndTime = time() 
+		if shootEndTime - shootStartTime >= Bullet.timeBetweenShots: 
+			shootStartTime, shootEndTime = 0, 0
+			isShooting = False
 
 	screen.fill(black)
 
-	renderPlayer()
-	renderBullets() 
-	renderAliens() 
-	renderFonts()
+	if not paused:
+		renderPlayer()
+		renderBullets() 
+		renderAliens() 
+		renderStats()
+		checkColl()
+	else: 
+		pause()
 
-	checkColl()
-
+	clock.tick(60)
 	pygame.display.update() 
 
