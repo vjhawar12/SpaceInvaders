@@ -18,6 +18,7 @@ clock = pygame.time.Clock()
 font = pygame.font.SysFont("monaco", 30)
 bulletSound = pygame.mixer.Sound(path.join("data", "bullet.wav"))
 hitSound = pygame.mixer.Sound(path.join("data", "explosion.wav"))
+bgSound = path.join("data", "background.wav")
 
 screen = pygame.display.set_mode(dimensions)
 pygame.display.set_caption("Space Invaders")
@@ -67,7 +68,7 @@ class Alien(pygame.sprite.Sprite):
 		del self
 
 	def put(self): 
-		pygame.draw.rect(screen, red, self.rect, 5)
+		#pygame.draw.rect(screen, red, self.rect, 5)
 		screen.blit(self.image, self.rect)
 
 	def step(self): 
@@ -95,7 +96,7 @@ class Player(pygame.sprite.Sprite):
 		super(Player, self).__init__()
 
 	def put(self): 
-		pygame.draw.rect(screen, (255, 0, 0), self.rect, 5)
+		#pygame.draw.rect(screen, (255, 0, 0), self.rect, 5)
 		screen.blit(self.image, self.rect)
 
 	def step_right(self): 
@@ -120,14 +121,13 @@ class Bullet(pygame.sprite.Sprite):
 		self.rect.y = _player.rect.y
 		self.bottom_right = self.rect.bottomright
 
-		pygame.mixer.Sound.play(bulletSound)
-		pygame.mixer.music.stop()
+		pygame.mixer.Channel(1).play(bulletSound)	
 
 		super(Bullet, self).__init__()
 		bullets.add(self)
 
 	def put(self): 
-		pygame.draw.rect(screen, (255, 0, 0), self.rect, 5)
+		#pygame.draw.rect(screen, (255, 0, 0), self.rect, 5)
 		screen.blit(self.image, self.rect)
 
 	def step(self): 
@@ -182,9 +182,7 @@ def checkColl():
 					_alien.die()
 					_bullet.die()
 					Player.kills += 1
-					pygame.mixer.Sound.play(hitSound)
-					pygame.mixer.music.stop()
-
+					pygame.mixer.Channel(0).play(hitSound)
 
 def pause():
 	pauseText = font.render("Press r to resume", True, white)
@@ -199,6 +197,10 @@ isReloading = False
 isShooting = False
 reloadStartTime, reloadEndTime = 0, 0
 shootStartTime, shootEndTime = 0, 0
+
+pygame.mixer.music.load(bgSound)
+pygame.mixer.music.play(-1)
+pygame.mixer.music.set_volume(0.4)
 
 while True:
 	for event in pygame.event.get():
@@ -247,6 +249,7 @@ while True:
 	else: 
 		pause()
 
-	clock.tick(60)
+
+	clock.tick(120)
 	pygame.display.update() 
 
