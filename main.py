@@ -5,6 +5,7 @@ import random
 
 pygame.init() 
 pygame.font.init()
+pygame.mixer.init() 
 
 dimensions = (800, 800)
 black = (0, 0, 0)
@@ -12,6 +13,8 @@ red = (255, 0, 0)
 white = (255, 255, 255)
 
 font = pygame.font.SysFont("monaco", 30)
+bulletSound = pygame.mixer.Sound(os.path.join("data", "bullet.wav"))
+hitSound = pygame.mixer.Sound(os.path.join("data", "explosion.wav"))
 
 screen = pygame.display.set_mode(dimensions)
 pygame.display.set_caption("Space Invaders")
@@ -108,6 +111,9 @@ class Bullet(pygame.sprite.Sprite):
 		self.rect.y = _player.rect.y
 		self.bottom_right = self.rect.bottomright
 
+		pygame.mixer.Sound.play(bulletSound)
+		pygame.mixer.music.stop()
+
 		super(Bullet, self).__init__()
 		bullets.add(self)
 
@@ -156,7 +162,7 @@ def renderPlayer():
 	if Player.lives <= 0: 
 		quit() 
 
-	_player.put() 
+	_player.put()
 
 
 def checkColl(): 
@@ -167,8 +173,11 @@ def checkColl():
 					_alien.die()
 					_bullet.die()
 					Player.kills += 1
+					pygame.mixer.Sound.play(hitSound)
+					pygame.mixer.music.stop()
 
-while True: 
+
+while True:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT: 
 			quit() 
