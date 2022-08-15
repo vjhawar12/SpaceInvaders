@@ -10,18 +10,18 @@ dimensions = (800, 800)
 black = (0, 0, 0)
 white = (255, 255, 255)
 
-player = pygame.image.load(os.path.join("data", "spaceship.png"))
-bullet = pygame.image.load(os.path.join("data", "bullet.png"))
-alien = pygame.image.load(os.path.join("data", "alien.png"))
-
 font = pygame.font.SysFont("monaco", 30)
 
 screen = pygame.display.set_mode(dimensions)
 pygame.display.set_caption("Space Invaders")
 pygame.mouse.set_visible(True)
 
-aliveAliens = []
-aliveBullets = []
+aliens = pygame.sprite.Group() 
+bullets = pygame.sprite.Group() 
+
+def quit(): 
+	sys.exit() 
+	pygame.quit()
 
 def renderFonts():
 	livesText = font.render(str(Player.lives), True, white)
@@ -29,15 +29,7 @@ def renderFonts():
 	screen.blit(livesText, (10, 0))
 	screen.blit(killsText, (10, 40))
 
-
-def isCollision(x1, x2, y1, y2):
-    distance = math.sqrt((math.pow(x1 - x2,2)) + (math.pow(y1 - y2,2)))
-    if distance <= 50:
-        return True
-    else:
-        return False
-
-class Alien: 
+class Alien(pygame.sprite.Sprite): 
 	minX = 100
 	maxX = 700
 	minY = 0 
@@ -50,89 +42,126 @@ class Alien:
 		randX = random.randint(Alien.minX, Alien.maxX)
 		randY = random.randint(Alien.minY, Alien.maxY)
 
-		self.x = randX 
-		self.y = randY
+		self.image = pygame.image.load(os.path.join("data", "alien.png"))
+		self.rect = self.image.get_rect()
+		self.rect.x = randX 
+		self.rect.y = randY
 
 		Alien.currentAliens += 1
 
+		super(Alien, self).__init__()
+
+
 	def die(self): 
-		print(f"killing alien id {id(self)}")
 		Alien.currentAliens -= 1
 		Player.lives -= 1
-		aliveAliens.remove(self)
+		aliens.remove(self)
 		del self
 
 	def put(self): 
-		screen.blit(alien, (self.x, self.y))
+		pygame.draw.rect(screen, (255, 0, 0), self.rect, 5)
+		screen.blit(self.image, self.rect)
 
 	def step(self): 
-		self.y += Alien.speed
+		self.rect.y += Alien.speed
+
+	def isHit(self): 
+		for _bullet in bullets: 
+			if self.rect.colliderect(_bullet.rect): 
+				print("Alien hit")
+				return True
+		return False
 
 	def isOutOfBounds(self): 
-		return self.x > 700 or self.x < 100 or self.y > 700 
+		return self.rect.x > 700 or self.rect.x < 100 or self.rect.y > 700 
 
 
-class Player: 
+class Player(pygame.sprite.Sprite): 
 	speed = 6 
 	lives = 3
 	kills = 0
 
 	def __init__(self): 
-		self.x = 400 
-		self.y = 700 
+		self.image = pygame.image.load(os.path.join("data", "spaceship.png"))
+		self.rect = self.image.get_rect()
+		self.rect.x = 400 
+		self.rect.y = 700 
+		self.put() 
 
-		screen.blit(player, (self.x, self.y))
+		super(Player, self).__init__()
 
 	def put(self): 
-		screen.blit(player, (self.x, self.y))
+		pygame.draw.rect(screen, (255, 0, 0), self.rect, 5)
+		screen.blit(self.image, self.rect)
 
 	def step_right(self): 
-		self.x += Player.speed
+		self.rect.x += Player.speed
 
 	def step_left(self): 
-		self.x -= Player.speed
+		self.rect.x -= Player.speed
 
 _player = Player()
 
-class Bullet: 
+class Bullet(pygame.sprite.Sprite): 
 	speed = 12 
 
-	def __init__(self, x, y): 
-		self.x = x
-		self.y = y
+	def __init__(self): 
+		self.image = pygame.image.load(os.path.join("data", "bullet.png"))
+		self.rect = self.image.get_rect()
+		self.rect.x = _player.rect.x
+		self.rect.y = _player.rect.y
+
+		super(Bullet, self).__init__()
 
 	def put(self): 
-		screen.blit(bullet, (self.x, self.y))
+		pygame.draw.rect(screen, (255, 0, 0), self.rect, 5)
+		screen.blit(self.image, self.rect)
 
 	def step(self): 
-		self.y -= Bullet.speed
+		self.rect.y -= Bullet.speed
 
 	def isOutOfBounds(self): 
-		return self.y < 50
+		return self.rect.y < 50
+
+	def isHit(self): 
+		for _alien in aliens.sprites(): 
+			if self.rect.colliderect(_alien.rect): 
+				print("Bullet hit")
+				return True
+		return False
 
 	def die(self): 
-		print(f"killing bullet id {id(self)}")
-		aliveBullets.remove(self)
+		bullets.remove(self)
 		del self
 
 def renderBullets(): 
-	for _bullet in aliveBullets: 
+	for _bullet in bullets.sprites(): 
 		_bullet.put() 
 		_bullet.step()
 
 		if _bullet.isOutOfBounds(): 
 			_bullet.die()
 
+		if _bullet.isHit(): 
+			_bullet.die() 
+		
 
 def renderAliens():
 	if Alien.currentAliens < Alien.maxAliens: 
-		aliveAliens.append(Alien())
+		alien = Alien()
+		aliens.add(alien)
 
-	for _alien in aliveAliens: 
+	for _alien in aliens.sprites(): 
 		_alien.put() 
 		_alien.step() 
+
 		if _alien.isOutOfBounds(): 
 			_alien.die() 
+
+		if _alien.isHit(): 
+			_alien.die() 
+			Player.kills += 1
+
 
 def renderPlayer(): 
 	keys = pygame.key.get_pressed() 
@@ -142,19 +171,21 @@ def renderPlayer():
 		_player.step_left()
 
 	if Player.lives <= 0: 
-		sys.exit() 
+		quit() 
 
 	_player.put() 
 
-running = True
+def checkColl(): 
+	pass 
 
-while running: 
+while True: 
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT: 
-			sys.exit()
+			quit() 
 		if event.type == pygame.KEYDOWN:
 			if event.key == pygame.K_SPACE:
-				aliveBullets.append(Bullet(_player.x, _player.y))	
+				bullet = Bullet()
+				bullets.add(bullet)
 
 	screen.fill(black)
 
@@ -162,6 +193,8 @@ while running:
 	renderBullets() 
 	renderAliens() 
 	renderFonts()
+
+	checkColl() 
 
 	pygame.display.update() 
 
