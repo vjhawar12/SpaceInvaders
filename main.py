@@ -13,6 +13,12 @@ black = (0, 0, 0)
 red = (255, 0, 0)
 white = (255, 255, 255)
 
+paused = False
+isReloading = False
+isShooting = False 
+reloadStartTime, reloadEndTime = 0, 0
+shootStartTime, shootEndTime = 0, 0
+
 clock = pygame.time.Clock()
 
 font = pygame.font.SysFont("monaco", 30)
@@ -26,18 +32,6 @@ pygame.mouse.set_visible(True)
 
 aliens = pygame.sprite.Group() 
 bullets = pygame.sprite.Group() 
-
-def quit(): 
-	exit() 
-	pygame.quit()
-
-def renderStats():
-	livesText = font.render(str(Player.lives), True, white)
-	killsText = font.render(str(Player.kills), True, white)
-	ammoText = font.render(f"{Bullet.ammo} / {Bullet.maxAmmo}", True, white)
-	screen.blit(livesText, (10, 0))
-	screen.blit(killsText, (10, 40))
-	screen.blit(ammoText, (10, 80))
 
 class Alien(pygame.sprite.Sprite): 
 	minX = 100
@@ -140,6 +134,14 @@ class Bullet(pygame.sprite.Sprite):
 		bullets.remove(self)
 		del self
 
+def renderStats():
+	livesText = font.render(str(Player.lives), True, white)
+	killsText = font.render(str(Player.kills), True, white)
+	ammoText = font.render(f"{Bullet.ammo} / {Bullet.maxAmmo}", True, white)
+	screen.blit(livesText, (10, 0))
+	screen.blit(killsText, (10, 40))
+	screen.blit(ammoText, (10, 80))
+
 def renderBullets(): 
 	for _bullet in bullets.sprites(): 
 		_bullet.put() 
@@ -184,19 +186,25 @@ def checkColl():
 					Player.kills += 1
 					pygame.mixer.Channel(0).play(hitSound)
 
+def renderLanding(): 
+	title = font.render("Space Invaders", True, white)
+	screen.blit(title, (400, 200))
+	playText = font.render("Play", True, white)
+	play_rect = playText.get_rect(centre=(400, 400))
+	screen.blit(playText, play_rect)
+
+
 def pause():
 	pauseText = font.render("Press r to resume", True, white)
 	text_rect = pauseText.get_rect(center=(400, 400))
 	screen.blit(pauseText, text_rect) 
 
+def quit(): 
+	exit() 
+	pygame.quit()
+
 def canShoot(): 
 	return not paused and not isReloading and not isShooting and Bullet.ammo > 0
-
-paused = False
-isReloading = False
-isShooting = False
-reloadStartTime, reloadEndTime = 0, 0
-shootStartTime, shootEndTime = 0, 0
 
 pygame.mixer.music.load(bgSound)
 pygame.mixer.music.play(-1)
@@ -227,7 +235,7 @@ while True:
 		if reloadEndTime - reloadStartTime >= Bullet.reloadSeconds: 
 			Bullet.ammo = Bullet.maxAmmo
 			reloadStartTime, reloadEndTime = 0, 0
-			isReloading = False
+			isReloading = False 
 
 	if isShooting:
 		if shootStartTime == 0: 
