@@ -18,6 +18,7 @@ paused = False
 mute = False
 isReloading = False
 isShooting = False 
+isMouseDown = False
 reloadStartTime, reloadEndTime = 0, 0
 shootStartTime, shootEndTime = 0, 0
 
@@ -56,7 +57,7 @@ class Button():
 
 	def isMouseTouching(self): 
 		mousePos = pygame.mouse.get_pos()
-		if self.rect.collidepoint(mousePos):
+		return self.rect.collidepoint(mousePos)
 
 	def action(self): 
 		self.func()
@@ -164,8 +165,8 @@ class Bullet(pygame.sprite.Sprite):
 		self.rect.x = _player.rect.x
 		self.rect.y = _player.rect.y
 		self.bottom_right = self.rect.bottomright
-
-		pygame.mixer.Channel(1).play(bulletSound)	
+		if not mute: 
+			pygame.mixer.Channel(1).play(bulletSound)	
 
 		super(Bullet, self).__init__()
 		bullets.add(self)
@@ -234,7 +235,8 @@ def checkColl():
 					_alien.die()
 					_bullet.die()
 					Player.kills += 1
-					pygame.mixer.Channel(0).play(hitSound)
+					if not mute: 
+						pygame.mixer.Channel(0).play(hitSound)
 
 def renderLanding(): 
 	title = font.render("Space Invaders", True, white)
@@ -283,6 +285,11 @@ while True:
 				paused = False
 			elif event.key == pygame.K_q: 
 				isReloading = True
+		elif event.type == pygame.MOUSEBUTTONDOWN:
+			if pygame.mouse.get_pressed()[0] == True:
+				for button in buttons:
+					if button.isVisible and button.isMouseTouching():
+						button.action()
 
 	if isReloading:
 		if reloadStartTime == 0: 
@@ -316,8 +323,6 @@ while True:
 	for button in buttons:
 		if button.isVisible: 	
 			button.draw()
-			if button.isMouseTouching(): 
-				button.action()
 
 	if mute:
 		pygame.mixer.music.set_volume(0.0) 
