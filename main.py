@@ -13,7 +13,9 @@ black = (0, 0, 0)
 red = (255, 0, 0)
 white = (255, 255, 255)
 
+landing = True
 paused = False
+mute = False
 isReloading = False
 isShooting = False 
 reloadStartTime, reloadEndTime = 0, 0
@@ -32,6 +34,54 @@ pygame.mouse.set_visible(True)
 
 aliens = pygame.sprite.Group() 
 bullets = pygame.sprite.Group() 
+
+class Button(): 
+	def __init__(self, dim, pos, func): 
+		self.dim = dim
+		self.pos = pos
+		self.rect = pygame.Rect(self.pos, self.dim)
+		self.isVisible = False
+		self.func = func
+
+	def addText(self, text, color=white): 
+		self.string = text
+		self.text = font.render(str(text), True, color)
+
+	def setVisibility(self, cond): 
+		self.isVisible = cond
+
+	def draw(self, color=white, thick=3):
+		pygame.draw.rect(screen, color, self.rect, thick)
+		screen.blit(self.text, self.pos)
+
+	def isMouseTouching(self): 
+		mousePos = pygame.mouse.get_pos()
+		if self.rect.collidepoint(mousePos):
+
+	def action(self): 
+		self.func()
+
+	def __str__(self): 
+		return self.string + " button"
+
+buttons = []
+
+def toggleMute(): 
+	global mute
+	mute = not mute
+
+def switchToGame(): 
+	global landing
+	landing = False
+
+muteButton = Button((100, 100), (300, 300), toggleMute)
+muteButton.addText("Mute")
+
+playButton = Button((100, 100), (300, 300), switchToGame)
+playButton.addText("Play")
+
+buttons.append(muteButton)
+buttons.append(playButton)
 
 class Alien(pygame.sprite.Sprite): 
 	minX = 100
@@ -189,15 +239,22 @@ def checkColl():
 def renderLanding(): 
 	title = font.render("Space Invaders", True, white)
 	screen.blit(title, (400, 200))
-	playText = font.render("Play", True, white)
-	play_rect = playText.get_rect(centre=(400, 400))
-	screen.blit(playText, play_rect)
+	playButton.setVisibility(True)
 
+def play(): 
+	muteButton.setVisibility(False)
+	playButton.setVisibility(False)
+	renderPlayer()
+	renderBullets() 
+	renderAliens() 
+	renderStats()
+	checkColl()
 
 def pause():
 	pauseText = font.render("Press r to resume", True, white)
-	text_rect = pauseText.get_rect(center=(400, 400))
-	screen.blit(pauseText, text_rect) 
+	pauseTextRect = pauseText.get_rect(center=(400, 400))
+	muteButton.setVisibility(True)
+	screen.blit(pauseText, pauseTextRect)
 
 def quit(): 
 	exit() 
@@ -249,14 +306,23 @@ while True:
 	screen.fill(black)
 
 	if not paused:
-		renderPlayer()
-		renderBullets() 
-		renderAliens() 
-		renderStats()
-		checkColl()
-	else: 
+		if landing: 
+			renderLanding() 
+		else: 
+			play()
+	else:
 		pause()
 
+	for button in buttons:
+		if button.isVisible: 	
+			button.draw()
+			if button.isMouseTouching(): 
+				button.action()
+
+	if mute:
+		pygame.mixer.music.set_volume(0.0) 
+	else:
+		pygame.mixer.music.set_volume(0.4)
 
 	clock.tick(120)
 	pygame.display.update() 
